@@ -3,32 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import {
-  User,
-  Profile,
-  Post,
-  Media,
-  Comment,
-  Like,
-  Follow,
-  Notification,
-  Conversation,
-  Message,
-  Story,
-  StoryView,
-  SavedPost,
-  Report,
-  Hashtag,
-  PostHashtag,
-  AdminStats
-} from '../src/types.js';
-
-// Setup node.js crypto utility for password hashing and random IDs
 import cryptoNode from 'crypto';
+import { supabase } from './supabase';
+import type {
+  User, Profile, Post, Media, Comment, Like, Follow,
+  Notification, Conversation, Message, Story, StoryView,
+  SavedPost, Report, Hashtag, PostHashtag, AdminStats
+} from '../src/types';
 
-function hashPassword(password: string): string {
+export function hashPassword(password: string): string {
   return cryptoNode.createHash('sha256').update(password + '_lantern_salt').digest('hex');
 }
 
@@ -36,966 +19,570 @@ function generateId(): string {
   return cryptoNode.randomBytes(8).toString('hex');
 }
 
-// Ensure the data directory exists
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'lantern.db.json');
+export class Database {
+  // =================== READ ===================
 
-interface DatabaseSchema {
-  users: User[];
-  profiles: Profile[];
-  posts: Post[];
-  media: Media[];
-  comments: Comment[];
-  likes: Like[];
-  follows: Follow[];
-  notifications: Notification[];
-  conversations: Conversation[];
-  messages: Message[];
-  stories: Story[];
-  storyViews: StoryView[];
-  savedPosts: SavedPost[];
-  reports: Report[];
-  hashtags: Hashtag[];
-  postHashtags: PostHashtag[];
-}
-
-const emptySchema = (): DatabaseSchema => ({
-  users: [],
-  profiles: [],
-  posts: [],
-  media: [],
-  comments: [],
-  likes: [],
-  follows: [],
-  notifications: [],
-  conversations: [],
-  messages: [],
-  stories: [],
-  storyViews: [],
-  savedPosts: [],
-  reports: [],
-  hashtags: [],
-  postHashtags: []
-});
-
-class Database {
-  public schema: DatabaseSchema = emptySchema();
-
-  constructor() {
-    this.init();
+  async getUsers(): Promise<User[]> {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapUserRow);
   }
 
-  private init() {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    if (fs.existsSync(DB_FILE)) {
-      try {
-        const fileContent = fs.readFileSync(DB_FILE, 'utf-8');
-        this.schema = JSON.parse(fileContent);
-      } catch (err) {
-        console.error('Failed to parse database file, starting clean', err);
-        this.schema = emptySchema();
-        this.save();
-      }
-    } else {
-      this.schema = emptySchema();
-      this.seed();
-      this.save();
-    }
+  async getUserById(id: string): Promise<User | undefined> {
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? this.mapUserRow(data) : undefined;
   }
 
-  private save() {
-    try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(this.schema, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Failed to write database to disk', err);
-    }
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const { data, error } = await supabase.from('users').select('*').ilike('username', username.trim()).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? this.mapUserRow(data) : undefined;
   }
 
-  private seed() {
-    // Generate high-fidelity initial users & creators
-    const usersData = [
-      { id: 'u_admin', email: 'admin@lantern.com', name: 'Lantern Staff', username: 'lantern', role: 'admin' as const },
-      { id: 'u_sophia', email: 'sophia@example.com', name: 'Sophia Sterling', username: 'sophia.sterling', role: 'user' as const },
-      { id: 'u_marcus', email: 'marcus@example.com', name: 'Marcus Chen', username: 'marcus.designs', role: 'user' as const },
-      { id: 'u_elena', email: 'elena@example.com', name: 'Elena Rostova', username: 'elena.wanderlust', role: 'user' as const },
-      { id: 'u_liam', email: 'liam@example.com', name: 'Liam Sterling', username: 'liam.creates', role: 'user' as const }
-    ];
-
-    const passwordHash = hashPassword('password123');
-
-    this.schema.users = usersData.map(u => ({
-      id: u.id,
-      email: u.email,
-      passwordHash,
-      username: u.username,
-      name: u.name,
-      role: u.role,
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days ago
-    }));
-
-    // Profiles
-    this.schema.profiles = [
-      {
-        userId: 'u_admin',
-        avatarUrl: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=200&h=200&fit=crop',
-        coverUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop',
-        bio: 'Official Lantern community manager and platform updates channel. Welcome to our secure, modern space. #LanternSocial',
-        website: 'lantern.com',
-        location: 'San Francisco, CA',
-        isPrivate: false,
-        themePreference: 'light'
-      },
-      {
-        userId: 'u_sophia',
-        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
-        coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=400&fit=crop',
-        bio: 'Portrait Photographer & Product Designer. Capturing geometry in raw emotions. ✨ Let\'s collaborate!',
-        website: 'sophiasterling.studio',
-        location: 'New York, NY',
-        isPrivate: false,
-        themePreference: 'light'
-      },
-      {
-        userId: 'u_marcus',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop',
-        coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=400&fit=crop',
-        bio: 'Minimalist Architect & UI/UX Director. Designing objects that stand the test of physical and digital time. #minimalism #design',
-        website: 'chen-minimalist.io',
-        location: 'Tokyo, JP',
-        isPrivate: false,
-        themePreference: 'dark'
-      },
-      {
-        userId: 'u_elena',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop',
-        coverUrl: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1200&h=400&fit=crop',
-        bio: 'Explorer of remote corners. Documenting cultures, mountains, and culinary wonders. 🧭 Always on the move.',
-        website: 'elena-travels.com',
-        location: 'Rome, IT',
-        isPrivate: false,
-        themePreference: 'light'
-      },
-      {
-        userId: 'u_liam',
-        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop',
-        coverUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=400&fit=crop',
-        bio: 'Visual Creator, Film director and Indie developer. Building immersive interactive layouts.',
-        website: 'liamcreates.co',
-        location: 'London, UK',
-        isPrivate: false,
-        themePreference: 'light'
-      }
-    ];
-
-    // Follow relationships (Everyone follows admin and each other)
-    const follows = [
-      { followerId: 'u_sophia', followingId: 'u_marcus' },
-      { followerId: 'u_sophia', followingId: 'u_elena' },
-      { followerId: 'u_sophia', followingId: 'u_admin' },
-      { followerId: 'u_marcus', followingId: 'u_sophia' },
-      { followerId: 'u_marcus', followingId: 'u_admin' },
-      { followerId: 'u_elena', followingId: 'u_sophia' },
-      { followerId: 'u_elena', followingId: 'u_marcus' },
-      { followerId: 'u_liam', followingId: 'u_sophia' },
-      { followerId: 'u_liam', followingId: 'u_marcus' },
-      { followerId: 'u_liam', followingId: 'u_elena' }
-    ];
-
-    this.schema.follows = follows.map((f, i) => ({
-      id: `f_${i}`,
-      ...f,
-      createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString()
-    }));
-
-    // Seed Posts
-    const postsData = [
-      {
-        id: 'p_1',
-        userId: 'u_sophia',
-        content: 'Golden Hour in New York. There is a specific angle where the city looks entirely painted in warm gold and glowing copper. Shot on 35mm. #goldenhour #photography #nyc',
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        likesCount: 3,
-        commentsCount: 2,
-        tags: ['goldenhour', 'photography', 'nyc'],
-        media: [
-          { id: 'm_p1_1', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&fit=crop', type: 'image' as const, order: 0 }
-        ]
-      },
-      {
-        id: 'p_2',
-        userId: 'u_marcus',
-        content: 'Completed the pavilion design project for the Tokyo Arch Expo. Stretched canvas interfaces met structural cedar wood beams. #minimalism #architecture #tokyo',
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        likesCount: 2,
-        commentsCount: 1,
-        tags: ['minimalism', 'architecture', 'tokyo'],
-        media: [
-          { id: 'm_p2_1', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&fit=crop', type: 'image' as const, order: 0 },
-          { id: 'm_p2_2', url: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&fit=crop', type: 'image' as const, order: 1 }
-        ]
-      },
-      {
-        id: 'p_3',
-        userId: 'u_elena',
-        content: 'Waking up to the mist rolling over the Italian Dolomites. No signal, no noise, just the sound of mountain air. 🏔️🇮🇹 #dolomites #travel #mountains',
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        likesCount: 4,
-        commentsCount: 2,
-        tags: ['dolomites', 'travel', 'mountains'],
-        media: [
-          { id: 'm_p3_1', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&fit=crop', type: 'image' as const, order: 0 }
-        ]
-      }
-    ];
-
-    this.schema.posts = postsData.map(p => ({
-      id: p.id,
-      userId: p.userId,
-      content: p.content,
-      createdAt: p.createdAt,
-      likesCount: p.likesCount,
-      commentsCount: p.commentsCount,
-      tags: p.tags
-    }));
-
-    // Post media
-    this.schema.media = postsData.flatMap(p => p.media.map(m => ({ ...m, postId: p.id })));
-
-    // Likes
-    this.schema.likes = [
-      { id: 'l_1', userId: 'u_marcus', postId: 'p_1', createdAt: new Date().toISOString() },
-      { id: 'l_2', userId: 'u_elena', postId: 'p_1', createdAt: new Date().toISOString() },
-      { id: 'l_3', userId: 'u_liam', postId: 'p_1', createdAt: new Date().toISOString() },
-      { id: 'l_4', userId: 'u_sophia', postId: 'p_2', createdAt: new Date().toISOString() },
-      { id: 'l_5', userId: 'u_liam', postId: 'p_2', createdAt: new Date().toISOString() },
-      { id: 'l_6', userId: 'u_sophia', postId: 'p_3', createdAt: new Date().toISOString() },
-      { id: 'l_7', userId: 'u_marcus', postId: 'p_3', createdAt: new Date().toISOString() },
-      { id: 'l_8', userId: 'u_liam', postId: 'p_3', createdAt: new Date().toISOString() },
-      { id: 'l_9', userId: 'u_admin', postId: 'p_3', createdAt: new Date().toISOString() }
-    ];
-
-    // Comments
-    this.schema.comments = [
-      { id: 'c_1', postId: 'p_1', userId: 'u_marcus', content: 'These colors are incredible Sophia. 35mm dynamic range hits different!', createdAt: new Date(Date.now() - 2.8 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'c_2', postId: 'p_1', userId: 'u_elena', content: 'Makes me want to visit NY next month. Perfect timing!', createdAt: new Date(Date.now() - 2.5 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'c_3', postId: 'p_2', userId: 'u_sophia', content: 'The wood textures are beautiful. Minimalist perfection.', createdAt: new Date(Date.now() - 1.8 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'c_4', postId: 'p_3', userId: 'u_liam', content: 'Absolutely breathtaking Elena! Take me next time.', createdAt: new Date(Date.now() - 0.9 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'c_5', postId: 'p_3', userId: 'u_sophia', content: 'That mist frame is perfect.', createdAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString() }
-    ];
-
-    // Conversations & Messages
-    this.schema.conversations = [
-      {
-        id: 'conv_1',
-        isGroup: false,
-        participants: ['u_sophia', 'u_marcus'],
-        lastMessageText: 'The project details look great. Talk tomorrow!',
-        lastMessageAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
-      }
-    ];
-
-    this.schema.messages = [
-      { id: 'msg_1', conversationId: 'conv_1', senderId: 'u_sophia', content: 'Hey Marcus, did you see the design specs I uploaded?', isSeen: true, createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() },
-      { id: 'msg_2', conversationId: 'conv_1', senderId: 'u_marcus', content: 'Yes, just reviewed them. Love the spatial layout.', isSeen: true, createdAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString() },
-      { id: 'msg_3', conversationId: 'conv_1', senderId: 'u_sophia', content: 'The project details look great. Talk tomorrow!', isSeen: false, createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() }
-    ];
-
-    // Stories (Sophia uploaded a story)
-    this.schema.stories = [
-      {
-        id: 'st_1',
-        userId: 'u_sophia',
-        mediaUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&h=1000&fit=crop',
-        mediaType: 'image',
-        expiresAt: new Date(Date.now() + 18 * 60 * 60 * 1000).toISOString(), // expires in 18 hrs
-        createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: 'st_2',
-        userId: 'u_marcus',
-        mediaUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=1000&fit=crop',
-        mediaType: 'image',
-        expiresAt: new Date(Date.now() + 20 * 60 * 60 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-      }
-    ];
-
-    // StoryViews
-    this.schema.storyViews = [
-      { id: 'stv_1', storyId: 'st_1', viewerId: 'u_marcus', createdAt: new Date().toISOString() },
-      { id: 'stv_2', storyId: 'st_1', viewerId: 'u_elena', createdAt: new Date().toISOString() }
-    ];
-
-    // SavedPosts
-    this.schema.savedPosts = [
-      { id: 'sp_1', userId: 'u_sophia', postId: 'p_2', createdAt: new Date().toISOString() },
-      { id: 'sp_2', userId: 'u_marcus', postId: 'p_3', createdAt: new Date().toISOString() }
-    ];
-
-    // Hashtags
-    this.schema.hashtags = [
-      { id: 'h_1', tag: 'photography', postCount: 1 },
-      { id: 'h_2', tag: 'nyc', postCount: 1 },
-      { id: 'h_3', tag: 'minimalism', postCount: 1 },
-      { id: 'h_4', tag: 'architecture', postCount: 1 },
-      { id: 'h_5', tag: 'tokyo', postCount: 1 },
-      { id: 'h_6', tag: 'dolomites', postCount: 1 },
-      { id: 'h_7', tag: 'travel', postCount: 1 },
-      { id: 'h_8', tag: 'mountains', postCount: 1 },
-      { id: 'h_9', tag: 'goldenhour', postCount: 1 }
-    ];
-
-    this.schema.postHashtags = [
-      { id: 'ph_1', postId: 'p_1', hashtagId: 'h_9' },
-      { id: 'ph_2', postId: 'p_1', hashtagId: 'h_1' },
-      { id: 'ph_3', postId: 'p_1', hashtagId: 'h_2' },
-      { id: 'ph_4', postId: 'p_2', hashtagId: 'h_3' },
-      { id: 'ph_5', postId: 'p_2', hashtagId: 'h_4' },
-      { id: 'ph_6', postId: 'p_2', hashtagId: 'h_5' },
-      { id: 'ph_7', postId: 'p_3', hashtagId: 'h_6' },
-      { id: 'ph_8', postId: 'p_3', hashtagId: 'h_7' },
-      { id: 'ph_9', postId: 'p_3', hashtagId: 'h_8' }
-    ];
-
-    // Notification
-    this.schema.notifications = [
-      { id: 'nt_1', senderId: 'u_marcus', receiverId: 'u_sophia', type: 'like', postId: 'p_1', isRead: false, createdAt: new Date().toISOString() },
-      { id: 'nt_2', senderId: 'u_marcus', receiverId: 'u_sophia', type: 'comment', postId: 'p_1', commentId: 'c_1', isRead: false, createdAt: new Date().toISOString() }
-    ];
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const { data, error } = await supabase.from('users').select('*').ilike('email', email.trim()).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? this.mapUserRow(data) : undefined;
   }
 
-  // ==========================================================================
-  // READ METHODS
-  // ==========================================================================
-
-  getUsers(): User[] {
-    return this.schema.users;
+  async getProfile(userId: string): Promise<Profile | undefined> {
+    const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? this.mapProfileRow(data) : undefined;
   }
 
-  getUserById(id: string): User | undefined {
-    return this.schema.users.find(u => u.id === id);
+  async getFollowers(userId: string): Promise<Follow[]> {
+    const { data, error } = await supabase.from('follows').select('*').eq('following_id', userId);
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapFollowRow);
   }
 
-  getUserByUsername(username: string): User | undefined {
-    const cleanUsername = username.toLowerCase().trim();
-    return this.schema.users.find(u => u.username.toLowerCase() === cleanUsername);
+  async getFollowing(userId: string): Promise<Follow[]> {
+    const { data, error } = await supabase.from('follows').select('*').eq('follower_id', userId);
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapFollowRow);
   }
 
-  getUserByEmail(email: string): User | undefined {
-    const cleanEmail = email.toLowerCase().trim();
-    return this.schema.users.find(u => u.email.toLowerCase() === cleanEmail);
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return !!data;
   }
 
-  getProfile(userId: string): Profile | undefined {
-    return this.schema.profiles.find(p => p.userId === userId);
+  async getPosts(): Promise<Post[]> {
+    const { data, error } = await supabase.from('posts').select('*').order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapPostRow);
   }
 
-  getFollowers(userId: string): Follow[] {
-    return this.schema.follows.filter(f => f.followingId === userId);
+  async getPostById(id: string): Promise<Post | undefined> {
+    const { data, error } = await supabase.from('posts').select('*').eq('id', id).maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? this.mapPostRow(data) : undefined;
   }
 
-  getFollowing(userId: string): Follow[] {
-    return this.schema.follows.filter(f => f.followerId === userId);
+  async getPostMedia(postId: string): Promise<Media[]> {
+    const { data, error } = await supabase.from('media').select('*').eq('post_id', postId).order('order', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapMediaRow);
   }
 
-  isFollowing(followerId: string, followingId: string): boolean {
-    return this.schema.follows.some(f => f.followerId === followerId && f.followingId === followingId);
+  async getComments(postId: string): Promise<Comment[]> {
+    const { data, error } = await supabase.from('comments').select('*').eq('post_id', postId).order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapCommentRow);
   }
 
-  getPosts(): Post[] {
-    return this.schema.posts;
+  async getLikes(postId: string): Promise<Like[]> {
+    const { data, error } = await supabase.from('likes').select('*').eq('post_id', postId);
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapLikeRow);
   }
 
-  getPostById(id: string): Post | undefined {
-    return this.schema.posts.find(p => p.id === id);
+  async isPostLiked(userId: string, postId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('likes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return !!data;
   }
 
-  getPostMedia(postId: string): Media[] {
-    return this.schema.media.filter(m => m.postId === postId).sort((a, b) => a.order - b.order);
+  async isPostSaved(userId: string, postId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return !!data;
   }
 
-  getComments(postId: string): Comment[] {
-    return this.schema.comments.filter(c => c.postId === postId).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  async getSavedPosts(userId: string): Promise<SavedPost[]> {
+    const { data, error } = await supabase.from('saved_posts').select('*').eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapSavedPostRow);
   }
 
-  getLikes(postId: string): Like[] {
-    return this.schema.likes.filter(l => l.postId === postId);
+  async getStories(): Promise<Story[]> {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapStoryRow);
   }
 
-  isPostLiked(userId: string, postId: string): boolean {
-    return this.schema.likes.some(l => l.userId === userId && l.postId === postId);
+  async getStoryViews(storyId: string): Promise<StoryView[]> {
+    const { data, error } = await supabase.from('story_views').select('*').eq('story_id', storyId);
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapStoryViewRow);
   }
 
-  isPostSaved(userId: string, postId: string): boolean {
-    return this.schema.savedPosts.some(sp => sp.userId === userId && sp.postId === postId);
+  async getConversations(userId: string): Promise<Conversation[]> {
+    const { data, error } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', userId);
+    if (error) throw new Error(error.message);
+    const ids = (data || []).map((d: any) => d.conversation_id);
+    if (ids.length === 0) return [];
+    const { data: convs, error: convErr } = await supabase
+      .from('conversations')
+      .select('*')
+      .in('id', ids)
+      .order('last_message_at', { ascending: false });
+    if (convErr) throw new Error(convErr.message);
+    return (convs || []).map(this.mapConversationRow);
   }
 
-  getSavedPosts(userId: string): SavedPost[] {
-    return this.schema.savedPosts.filter(sp => sp.userId === userId);
+  async getMessages(conversationId: string): Promise<Message[]> {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapMessageRow);
   }
 
-  getStories(): Story[] {
-    // Filter active (non-expired) stories
-    const now = new Date();
-    return this.schema.stories.filter(s => new Date(s.expiresAt) > now).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  async getNotifications(userId: string): Promise<Notification[]> {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('receiver_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapNotificationRow);
   }
 
-  getStoryViews(storyId: string): StoryView[] {
-    return this.schema.storyViews.filter(sv => sv.storyId === storyId);
+  async getReports(): Promise<Report[]> {
+    const { data, error } = await supabase.from('reports').select('*');
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapReportRow);
   }
 
-  getConversations(userId: string): Conversation[] {
-    return this.schema.conversations
-      .filter(c => c.participants.includes(userId))
-      .sort((a, b) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
+  async getHashtags(): Promise<Hashtag[]> {
+    const { data, error } = await supabase.from('hashtags').select('*');
+    if (error) throw new Error(error.message);
+    return (data || []).map(this.mapHashtagRow);
   }
 
-  getMessages(conversationId: string): Message[] {
-    return this.schema.messages
-      .filter(m => m.conversationId === conversationId)
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }
+  // =================== WRITE ===================
 
-  getNotifications(userId: string): Notification[] {
-    return this.schema.notifications
-      .filter(n => n.receiverId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
-
-  getReports(): Report[] {
-    return this.schema.reports;
-  }
-
-  getHashtags(): Hashtag[] {
-    return this.schema.hashtags;
-  }
-
-  // ==========================================================================
-  // WRITE & MUTATION METHODS
-  // ==========================================================================
-
-  createUser(email: string, passwordHash: string, username: string, name: string): User {
-    const newUser: User = {
-      id: `u_${generateId()}`,
-      email: email.toLowerCase().trim(),
-      passwordHash,
-      username: username.toLowerCase().trim(),
-      name: name.trim(),
-      role: 'user',
-      createdAt: new Date().toISOString()
-    };
-
-    const newProfile: Profile = {
-      userId: newUser.id,
-      avatarUrl: `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop`, // Safe modern placeholder
-      coverUrl: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop',
-      bio: '',
-      website: '',
-      location: '',
-      isPrivate: false,
-      themePreference: 'light'
-    };
-
-    this.schema.users.push(newUser);
-    this.schema.profiles.push(newProfile);
-    this.save();
-    return newUser;
-  }
-
-  updateProfile(userId: string, updates: Partial<Profile>): Profile | undefined {
-    const profile = this.getProfile(userId);
-    if (!profile) return undefined;
-
-    Object.assign(profile, updates);
-    this.save();
-    return profile;
-  }
-
-  updateUser(userId: string, updates: { name?: string; username?: string; passwordHash?: string }): User | undefined {
-    const user = this.getUserById(userId);
-    if (!user) return undefined;
-
-    if (updates.name) user.name = updates.name.trim();
-    if (updates.username) user.username = updates.username.toLowerCase().trim();
-    if (updates.passwordHash) user.passwordHash = updates.passwordHash;
-    this.save();
+  async createUser(email: string, passwordHash: string, username: string, name: string): Promise<User> {
+    const { data, error } = await supabase
+      .from('users')
+      .insert({ email: email.toLowerCase().trim(), password_hash: passwordHash, username: username.toLowerCase().trim(), name: name.trim() } as any)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const user = this.mapUserRow(data);
+    // Create default profile
+    await supabase.from('profiles').insert({
+      user_id: user.id,
+      avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+      cover_url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop',
+      bio: '', website: '', location: '', is_private: false, theme_preference: 'light', settings: {}
+    });
     return user;
   }
 
-  createPost(userId: string, content: string, mediaUrls: string[]): Post {
-    const postTags = this.extractHashtags(content);
-    const newPost: Post = {
-      id: `p_${generateId()}`,
-      userId,
-      content,
-      createdAt: new Date().toISOString(),
-      likesCount: 0,
-      commentsCount: 0,
-      tags: postTags
-    };
+  async updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile | undefined> {
+    const dbUpdates: any = {};
+    if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
+    if (updates.coverUrl !== undefined) dbUpdates.cover_url = updates.coverUrl;
+    if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
+    if (updates.website !== undefined) dbUpdates.website = updates.website;
+    if (updates.location !== undefined) dbUpdates.location = updates.location;
+    if (updates.isPrivate !== undefined) dbUpdates.is_private = updates.isPrivate;
+    if (updates.themePreference !== undefined) dbUpdates.theme_preference = updates.themePreference;
+    if (updates.settings !== undefined) dbUpdates.settings = typeof updates.settings === 'string' ? JSON.parse(updates.settings) : updates.settings;
+    const { data, error } = await supabase.from('profiles').update(dbUpdates).eq('user_id', userId).select().single();
+    if (error) throw new Error(error.message);
+    return data ? this.mapProfileRow(data) : undefined;
+  }
 
-    // Create post media
-    mediaUrls.forEach((url, i) => {
+  async updateUser(userId: string, updates: { name?: string; username?: string; passwordHash?: string }): Promise<User | undefined> {
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name.trim();
+    if (updates.username) dbUpdates.username = updates.username.toLowerCase().trim();
+    if (updates.passwordHash) dbUpdates.password_hash = updates.passwordHash;
+    const { data, error } = await supabase.from('users').update(dbUpdates).eq('id', userId).select().single();
+    if (error) throw new Error(error.message);
+    return data ? this.mapUserRow(data) : undefined;
+  }
+
+  async createPost(userId: string, content: string, mediaUrls: string[]): Promise<Post> {
+    const postTags = this.extractHashtags(content);
+    const { data: postData, error } = await supabase
+      .from('posts')
+      .insert({ user_id: userId, content: content || '', tags: postTags })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    const newPost = this.mapPostRow(postData);
+    // Create media
+    for (let i = 0; i < mediaUrls.length; i++) {
+      const url = mediaUrls[i];
       const isVideo = url.endsWith('.mp4') || url.includes('video');
-      const mediaItem: Media = {
-        id: `m_${generateId()}`,
-        postId: newPost.id,
+      await supabase.from('media').insert({
+        post_id: newPost.id,
         url,
         type: isVideo ? 'video' : 'image',
         order: i
-      };
-      this.schema.media.push(mediaItem);
-    });
-
-    // Save tags and handle tag relation count
-    postTags.forEach(tag => {
-      let hashtag = this.schema.hashtags.find(h => h.tag === tag);
-      if (!hashtag) {
-        hashtag = { id: `h_${generateId()}`, tag, postCount: 1 };
-        this.schema.hashtags.push(hashtag);
-      } else {
-        hashtag.postCount += 1;
-      }
-
-      this.schema.postHashtags.push({
-        id: `ph_${generateId()}`,
-        postId: newPost.id,
-        hashtagId: hashtag.id
       });
-    });
-
-    this.schema.posts.unshift(newPost); // Add to beginning of feed
-    this.save();
-    return newPost;
-  }
-
-  updatePost(postId: string, userId: string, content: string): Post | undefined {
-    const post = this.getPostById(postId);
-    if (!post || post.userId !== userId) return undefined;
-
-    // Clean old hashtags
-    const oldTags = post.tags;
-    oldTags.forEach(tag => {
-      const hashtag = this.schema.hashtags.find(h => h.tag === tag);
-      if (hashtag) {
-        hashtag.postCount = Math.max(0, hashtag.postCount - 1);
-      }
-    });
-    this.schema.postHashtags = this.schema.postHashtags.filter(ph => ph.postId !== postId);
-
-    // Setup new hashtags
-    const newTags = this.extractHashtags(content);
-    post.content = content;
-    post.tags = newTags;
-
-    newTags.forEach(tag => {
-      let hashtag = this.schema.hashtags.find(h => h.tag === tag);
-      if (!hashtag) {
-        hashtag = { id: `h_${generateId()}`, tag, postCount: 1 };
-        this.schema.hashtags.push(hashtag);
+    }
+    // Handle hashtags
+    for (const tag of postTags) {
+      const { data: existing } = await supabase.from('hashtags').select('*').eq('tag', tag).maybeSingle();
+      if (existing) {
+        await supabase.from('hashtags').update({ post_count: (existing.post_count || 0) + 1 }).eq('id', existing.id);
       } else {
-        hashtag.postCount += 1;
-      }
-
-      this.schema.postHashtags.push({
-        id: `ph_${generateId()}`,
-        postId: post.id,
-        hashtagId: hashtag.id
-      });
-    });
-
-    this.save();
-    return post;
-  }
-
-  deletePost(postId: string, userId: string, bypassUserCheck: boolean = false): boolean {
-    const postIndex = this.schema.posts.findIndex(p => p.id === postId);
-    if (postIndex === -1) return false;
-
-    const post = this.schema.posts[postIndex];
-    if (!bypassUserCheck && post.userId !== userId) return false;
-
-    // Remove tags relations
-    post.tags.forEach(tag => {
-      const hashtag = this.schema.hashtags.find(h => h.tag === tag);
-      if (hashtag) {
-        hashtag.postCount = Math.max(0, hashtag.postCount - 1);
-      }
-    });
-
-    // CRITICAL CASCADE: Remove children
-    this.schema.posts.splice(postIndex, 1);
-    this.schema.media = this.schema.media.filter(m => m.postId !== postId);
-    this.schema.comments = this.schema.comments.filter(c => c.postId !== postId);
-    this.schema.likes = this.schema.likes.filter(l => l.postId !== postId);
-    this.schema.savedPosts = this.schema.savedPosts.filter(sp => sp.postId !== postId);
-    this.schema.postHashtags = this.schema.postHashtags.filter(ph => ph.postId !== postId);
-    this.schema.reports = this.schema.reports.filter(r => !(r.targetType === 'post' && r.targetId === postId));
-    this.schema.notifications = this.schema.notifications.filter(n => n.postId !== postId);
-
-    this.save();
-    return true;
-  }
-
-  toggleLike(userId: string, postId?: string, commentId?: string): { liked: boolean; count: number } {
-    if (!postId && !commentId) throw new Error('Must provide either postId or commentId');
-
-    const existingIndex = this.schema.likes.findIndex(
-      l => l.userId === userId &&
-      (postId ? l.postId === postId : l.commentId === commentId)
-    );
-
-    let liked = false;
-    if (existingIndex !== -1) {
-      // Unlike
-      this.schema.likes.splice(existingIndex, 1);
-      liked = false;
-    } else {
-      // Like
-      const newLike: Like = {
-        id: `l_${generateId()}`,
-        userId,
-        postId,
-        commentId,
-        createdAt: new Date().toISOString()
-      };
-      this.schema.likes.push(newLike);
-      liked = true;
-
-      // Realtime Notification trigger
-      if (postId) {
-        const post = this.getPostById(postId);
-        if (post && post.userId !== userId) {
-          this.createNotification(userId, post.userId, 'like', postId);
+        const { data: newTag } = await supabase.from('hashtags').insert({ tag, post_count: 1 }).select().single();
+        if (newTag) {
+          await supabase.from('post_hashtags').insert({ post_id: newPost.id, hashtag_id: newTag.id });
         }
       }
     }
+    return newPost;
+  }
 
-    // Update post counts
-    let count = 0;
-    if (postId) {
-      const post = this.getPostById(postId);
-      if (post) {
-        const postLikes = this.getLikes(postId);
-        post.likesCount = postLikes.length;
-        count = post.likesCount;
+  async updatePost(postId: string, userId: string, content: string): Promise<Post | undefined> {
+    const post = await this.getPostById(postId);
+    if (!post || post.userId !== userId) return undefined;
+    const oldTags = post.tags;
+    const newTags = this.extractHashtags(content);
+    // Decrement old hashtags
+    for (const tag of oldTags) {
+      const { data: existing } = await supabase.from('hashtags').select('*').eq('tag', tag).maybeSingle();
+      if (existing) {
+        await supabase.from('hashtags').update({ post_count: Math.max(0, (existing.post_count || 0) - 1) }).eq('id', existing.id);
       }
     }
+    await supabase.from('post_hashtags').delete().eq('post_id', postId);
+    // Update post
+    const { data, error } = await supabase.from('posts').update({ content, tags: newTags }).eq('id', postId).select().single();
+    if (error) throw new Error(error.message);
+    // Increment new hashtags
+    for (const tag of newTags) {
+      const { data: existing } = await supabase.from('hashtags').select('*').eq('tag', tag).maybeSingle();
+      if (existing) {
+        await supabase.from('hashtags').update({ post_count: (existing.post_count || 0) + 1 }).eq('id', existing.id);
+      } else {
+        const { data: newTag } = await supabase.from('hashtags').insert({ tag, post_count: 1 }).select().single();
+        if (newTag) {
+          await supabase.from('post_hashtags').insert({ post_id: postId, hashtag_id: newTag.id });
+        }
+      }
+    }
+    return data ? this.mapPostRow(data) : undefined;
+  }
 
-    this.save();
+  async deletePost(postId: string, userId: string, bypassUserCheck: boolean = false): Promise<boolean> {
+    const post = await this.getPostById(postId);
+    if (!post) return false;
+    if (!bypassUserCheck && post.userId !== userId) return false;
+    const { error } = await supabase.from('posts').delete().eq('id', postId);
+    if (error) throw new Error(error.message);
+    return true;
+  }
+
+  async toggleLike(userId: string, postId?: string, commentId?: string): Promise<{ liked: boolean; count: number }> {
+    if (!postId && !commentId) throw new Error('Must provide either postId or commentId');
+    const query = supabase.from('likes').select('*').eq('user_id', userId);
+    if (postId) query.eq('post_id', postId);
+    if (commentId) query.eq('comment_id', commentId);
+    const { data: existing } = await query.maybeSingle();
+    let liked: boolean;
+    if (existing) {
+      await supabase.from('likes').delete().eq('id', existing.id);
+      liked = false;
+    } else {
+      const insert: any = { user_id: userId };
+      if (postId) insert.post_id = postId;
+      if (commentId) insert.comment_id = commentId;
+      await supabase.from('likes').insert(insert);
+      liked = true;
+      if (postId) {
+        const post = await this.getPostById(postId);
+        if (post && post.userId !== userId) {
+          await this.createNotification(userId, post.userId, 'like', postId);
+        }
+      }
+    }
+    let count = 0;
+    if (postId) {
+      const { data: allLikes } = await supabase.from('likes').select('id', { count: 'exact' }).eq('post_id', postId);
+      count = allLikes?.length || 0;
+      await supabase.from('posts').update({ likes_count: count }).eq('id', postId);
+    }
     return { liked, count };
   }
 
-  createComment(userId: string, postId: string, content: string): Comment {
-    const post = this.getPostById(postId);
+  async createComment(userId: string, postId: string, content: string): Promise<Comment> {
+    const post = await this.getPostById(postId);
     if (!post) throw new Error('Post not found');
-
-    const newComment: Comment = {
-      id: `c_${generateId()}`,
-      postId,
-      userId,
-      content,
-      createdAt: new Date().toISOString()
-    };
-
-    this.schema.comments.push(newComment);
-    post.commentsCount = this.schema.comments.filter(c => c.postId === postId).length;
-
-    // Send notification
+    const { data, error } = await supabase.from('comments').insert({ post_id: postId, user_id: userId, content }).select().single();
+    if (error) throw new Error(error.message);
+    const newComment = this.mapCommentRow(data);
+    const { data: allComments } = await supabase.from('comments').select('id', { count: 'exact' }).eq('post_id', postId);
+    const count = allComments?.length || 0;
+    await supabase.from('posts').update({ comments_count: count }).eq('id', postId);
     if (post.userId !== userId) {
-      this.createNotification(userId, post.userId, 'comment', postId, newComment.id);
+      await this.createNotification(userId, post.userId, 'comment', postId, newComment.id);
     }
-
-    this.save();
     return newComment;
   }
 
-  deleteComment(commentId: string, userId: string, bypassUserCheck: boolean = false): boolean {
-    const commentIndex = this.schema.comments.findIndex(c => c.id === commentId);
-    if (commentIndex === -1) return false;
-
-    const comment = this.schema.comments[commentIndex];
-    if (!bypassUserCheck && comment.userId !== userId) return false;
-
-    this.schema.comments.splice(commentIndex, 1);
-
-    // Update Post Comment counts
-    const post = this.getPostById(comment.postId);
-    if (post) {
-      post.commentsCount = this.schema.comments.filter(c => c.postId === comment.postId).length;
-    }
-
-    // Cascade delete likes / reports for comment
-    this.schema.likes = this.schema.likes.filter(l => l.commentId !== commentId);
-    this.schema.reports = this.schema.reports.filter(r => !(r.targetType === 'comment' && r.targetId === commentId));
-    this.schema.notifications = this.schema.notifications.filter(n => n.commentId !== commentId);
-
-    this.save();
+  async deleteComment(commentId: string, userId: string, bypassUserCheck: boolean = false): Promise<boolean> {
+    const { data: comment } = await supabase.from('comments').select('*').eq('id', commentId).maybeSingle();
+    if (!comment) return false;
+    if (!bypassUserCheck && comment.user_id !== userId) return false;
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    if (error) throw new Error(error.message);
+    // Update count
+    const { data: allComments } = await supabase.from('comments').select('id', { count: 'exact' }).eq('post_id', comment.post_id);
+    const count = allComments?.length || 0;
+    await supabase.from('posts').update({ comments_count: count }).eq('id', comment.post_id);
     return true;
   }
 
-  toggleSavePost(userId: string, postId: string): boolean {
-    const existingIndex = this.schema.savedPosts.findIndex(sp => sp.userId === userId && sp.postId === postId);
-
-    if (existingIndex !== -1) {
-      this.schema.savedPosts.splice(existingIndex, 1);
-      this.save();
-      return false; // Unsaved
+  async toggleSavePost(userId: string, postId: string): Promise<boolean> {
+    const { data: existing } = await supabase
+      .from('saved_posts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('post_id', postId)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('saved_posts').delete().eq('id', existing.id);
+      return false;
     } else {
-      const newSaved: SavedPost = {
-        id: `sp_${generateId()}`,
-        userId,
-        postId,
-        createdAt: new Date().toISOString()
-      };
-      this.schema.savedPosts.push(newSaved);
-      this.save();
-      return true; // Saved
+      await supabase.from('saved_posts').insert({ user_id: userId, post_id: postId });
+      return true;
     }
   }
 
-  toggleFollow(followerId: string, followingId: string): boolean {
+  async toggleFollow(followerId: string, followingId: string): Promise<boolean> {
     if (followerId === followingId) return false;
-
-    const existingIndex = this.schema.follows.findIndex(f => f.followerId === followerId && f.followingId === followingId);
-
-    if (existingIndex !== -1) {
-      this.schema.follows.splice(existingIndex, 1);
-      this.save();
-      return false; // Unfollowed
+    const { data: existing } = await supabase
+      .from('follows')
+      .select('id')
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from('follows').delete().eq('id', existing.id);
+      return false;
     } else {
-      const newFollow: Follow = {
-        id: `f_${generateId()}`,
-        followerId,
-        followingId,
-        createdAt: new Date().toISOString()
-      };
-      this.schema.follows.push(newFollow);
-
-      // Notification
-      this.createNotification(followerId, followingId, 'follow');
-
-      this.save();
-      return true; // Followed
+      await supabase.from('follows').insert({ follower_id: followerId, following_id: followingId });
+      await this.createNotification(followerId, followingId, 'follow');
+      return true;
     }
   }
 
-  createStory(userId: string, mediaUrl: string, mediaType: 'image' | 'video' = 'image'): Story {
-    const newStory: Story = {
-      id: `st_${generateId()}`,
-      userId,
-      mediaUrl,
-      mediaType,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
-      createdAt: new Date().toISOString()
-    };
-
-    this.schema.stories.push(newStory);
-    this.save();
-    return newStory;
+  async createStory(userId: string, mediaUrl: string, mediaType: 'image' | 'video' = 'image'): Promise<Story> {
+    const { data, error } = await supabase
+      .from('stories')
+      .insert({
+        user_id: userId,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return this.mapStoryRow(data);
   }
 
-  viewStory(storyId: string, viewerId: string): StoryView | undefined {
-    const story = this.schema.stories.find(s => s.id === storyId);
+  async viewStory(storyId: string, viewerId: string): Promise<StoryView | undefined> {
+    const { data: story } = await supabase.from('stories').select('*').eq('id', storyId).maybeSingle();
     if (!story) return undefined;
-
-    // Avoid duplicate views
-    const existing = this.schema.storyViews.find(sv => sv.storyId === storyId && sv.viewerId === viewerId);
-    if (existing) return existing;
-
-    const newView: StoryView = {
-      id: `stv_${generateId()}`,
-      storyId,
-      viewerId,
-      createdAt: new Date().toISOString()
-    };
-
-    this.schema.storyViews.push(newView);
-    this.save();
-    return newView;
+    const { data: existing } = await supabase
+      .from('story_views')
+      .select('id')
+      .eq('story_id', storyId)
+      .eq('viewer_id', viewerId)
+      .maybeSingle();
+    if (existing) return this.mapStoryViewRow(existing);
+    const { data, error } = await supabase.from('story_views').insert({ story_id: storyId, viewer_id: viewerId }).select().single();
+    if (error) throw new Error(error.message);
+    return this.mapStoryViewRow(data);
   }
 
-  createConversation(participantIds: string[], name?: string): Conversation {
-    // Avoid double conversations for 1-on-1 chats
-    if (participantIds.length === 2 && !name) {
-      const sortedIds = [...participantIds].sort();
-      const existing = this.schema.conversations.find(
-        c => !c.isGroup &&
-        c.participants.length === 2 &&
-        [...c.participants].sort().every((v, i) => v === sortedIds[i])
-      );
-      if (existing) return existing;
+  async createConversation(participantIds: string[], name?: string): Promise<Conversation> {
+    const uniqueIds = Array.from(new Set(participantIds));
+    if (uniqueIds.length === 2 && !name) {
+      const sorted = [...uniqueIds].sort();
+      const { data: existing } = await supabase
+        .from('conversations')
+        .select('*, conversation_participants(user_id)')
+        .eq('is_group', false)
+        .maybeSingle();
+      if (existing) {
+        const participants = existing.conversation_participants?.map((p: any) => p.user_id) || [];
+        const pSorted = [...participants].sort();
+        if (pSorted.length === 2 && pSorted[0] === sorted[0] && pSorted[1] === sorted[1]) {
+          return this.mapConversationRow(existing);
+        }
+      }
     }
-
-    const newConv: Conversation = {
-      id: `conv_${generateId()}`,
-      name,
-      isGroup: participantIds.length > 2 || !!name,
-      participants: participantIds,
-      lastMessageText: '',
-      lastMessageAt: new Date().toISOString()
-    };
-
-    this.schema.conversations.push(newConv);
-    this.save();
-    return newConv;
+    const { data: conv, error } = await supabase
+      .from('conversations')
+      .insert({ name: name || null, is_group: uniqueIds.length > 2 || !!name })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    for (const uid of uniqueIds) {
+      await supabase.from('conversation_participants').insert({ conversation_id: conv.id, user_id: uid });
+    }
+    const { data: fullConv } = await supabase.from('conversations').select('*').eq('id', conv.id).single();
+    return this.mapConversationRow(fullConv);
   }
 
-  createMessage(conversationId: string, senderId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video'): Message {
-    const conv = this.schema.conversations.find(c => c.id === conversationId);
+  async createMessage(conversationId: string, senderId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video'): Promise<Message> {
+    const { data: conv } = await supabase.from('conversations').select('*').eq('id', conversationId).maybeSingle();
     if (!conv) throw new Error('Conversation not found');
-
-    const newMessage: Message = {
-      id: `msg_${generateId()}`,
-      conversationId,
-      senderId,
-      content,
-      mediaUrl,
-      mediaType,
-      isSeen: false,
-      createdAt: new Date().toISOString()
-    };
-
-    this.schema.messages.push(newMessage);
-
-    // Update conversation metrics
-    conv.lastMessageText = mediaUrl ? `Sent a media attachment` : content;
-    conv.lastMessageAt = newMessage.createdAt;
-
-    // Trigger push notifications to other participants
-    conv.participants.forEach(pId => {
+    const { data, error } = await supabase.from('messages').insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      content: content || '',
+      media_url: mediaUrl || null,
+      media_type: mediaType || null
+    }).select().single();
+    if (error) throw new Error(error.message);
+    await supabase.from('conversations').update({
+      last_message_text: mediaUrl ? 'Sent a media attachment' : content,
+      last_message_at: new Date().toISOString()
+    }).eq('id', conversationId);
+    const { data: participants } = await supabase.from('conversation_participants').select('user_id').eq('conversation_id', conversationId);
+    const pIds = (participants || []).map((p: any) => p.user_id);
+    for (const pId of pIds) {
       if (pId !== senderId) {
-        this.createNotification(senderId, pId, 'message', undefined, undefined, newMessage.id);
-      }
-    });
-
-    this.save();
-    return newMessage;
-  }
-
-  markMessagesAsSeen(conversationId: string, userId: string) {
-    this.schema.messages.forEach(m => {
-      if (m.conversationId === conversationId && m.senderId !== userId) {
-        m.isSeen = true;
-      }
-    });
-    this.save();
-  }
-
-  createNotification(senderId: string, receiverId: string, type: Notification['type'], postId?: string, commentId?: string, messageId?: string): Notification {
-    const newNotif: Notification = {
-      id: `nt_${generateId()}`,
-      senderId,
-      receiverId,
-      type,
-      postId,
-      commentId,
-      messageId,
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
-
-    this.schema.notifications.unshift(newNotif);
-    this.save();
-    return newNotif;
-  }
-
-  markNotificationsAsRead(userId: string) {
-    this.schema.notifications.forEach(n => {
-      if (n.receiverId === userId) {
-        n.isRead = true;
-      }
-    });
-    this.save();
-  }
-
-  createReport(reporterId: string, targetType: Report['targetType'], targetId: string, reason: string): Report {
-    const newReport: Report = {
-      id: `rep_${generateId()}`,
-      reporterId,
-      targetType,
-      targetId,
-      reason,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    };
-    this.schema.reports.push(newReport);
-    this.save();
-    return newReport;
-  }
-
-  resolveReport(reportId: string, status: 'resolved' | 'dismissed'): Report | undefined {
-    const report = this.schema.reports.find(r => r.id === reportId);
-    if (!report) return undefined;
-
-    report.status = status;
-
-    if (status === 'resolved') {
-      // Take automated moderation action
-      if (report.targetType === 'post') {
-        this.deletePost(report.targetId, '', true);
-      } else if (report.targetType === 'comment') {
-        this.deleteComment(report.targetId, '', true);
-      } else if (report.targetType === 'user') {
-        this.deleteUser(report.targetId);
+        await this.createNotification(senderId, pId, 'message', undefined, undefined, data.id);
       }
     }
-
-    this.save();
-    return report;
+    return this.mapMessageRow(data);
   }
 
-  deleteUser(userId: string): boolean {
-    const userIndex = this.schema.users.findIndex(u => u.id === userId);
-    if (userIndex === -1) return false;
+  async markMessagesAsSeen(conversationId: string, userId: string): Promise<void> {
+    await supabase
+      .from('messages')
+      .update({ is_seen: true })
+      .eq('conversation_id', conversationId)
+      .neq('sender_id', userId);
+  }
 
-    // CRITICAL USER CASCADE:
-    // 1. Delete profiles
-    this.schema.profiles = this.schema.profiles.filter(p => p.userId !== userId);
+  async createNotification(senderId: string, receiverId: string, type: Notification['type'], postId?: string, commentId?: string, messageId?: string): Promise<Notification> {
+    const { data, error } = await supabase.from('notifications').insert({
+      sender_id: senderId,
+      receiver_id: receiverId,
+      type,
+      post_id: postId || null,
+      comment_id: commentId || null,
+      message_id: messageId || null
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return this.mapNotificationRow(data);
+  }
 
-    // 2. Delete posts (which cascadingly deletes post children)
-    const userPostIds = this.schema.posts.filter(p => p.userId === userId).map(p => p.id);
-    userPostIds.forEach(pId => this.deletePost(pId, userId, true));
+  async markNotificationsAsRead(userId: string): Promise<void> {
+    await supabase.from('notifications').update({ is_read: true }).eq('receiver_id', userId);
+  }
 
-    // 3. Delete comments left by user
-    const commentIds = this.schema.comments.filter(c => c.userId === userId).map(c => c.id);
-    commentIds.forEach(cId => this.deleteComment(cId, userId, true));
+  async createReport(reporterId: string, targetType: Report['targetType'], targetId: string, reason: string): Promise<Report> {
+    const { data, error } = await supabase.from('reports').insert({
+      reporter_id: reporterId,
+      target_type: targetType,
+      target_id: targetId,
+      reason,
+      status: 'pending'
+    }).select().single();
+    if (error) throw new Error(error.message);
+    return this.mapReportRow(data);
+  }
 
-    // 4. Delete user likes
-    this.schema.likes = this.schema.likes.filter(l => l.userId !== userId);
+  async resolveReport(reportId: string, status: 'resolved' | 'dismissed'): Promise<Report | undefined> {
+    const { data: report } = await supabase.from('reports').select('*').eq('id', reportId).maybeSingle();
+    if (!report) return undefined;
+    await supabase.from('reports').update({ status }).eq('id', reportId);
+    if (status === 'resolved') {
+      if (report.target_type === 'post') {
+        await this.deletePost(report.target_id, '', true);
+      } else if (report.target_type === 'comment') {
+        await this.deleteComment(report.target_id, '', true);
+      } else if (report.target_type === 'user') {
+        await this.deleteUser(report.target_id);
+      }
+    }
+    const { data: updated } = await supabase.from('reports').select('*').eq('id', reportId).single();
+    return this.mapReportRow(updated);
+  }
 
-    // 5. Delete follow associations
-    this.schema.follows = this.schema.follows.filter(f => f.followerId !== userId && f.followingId !== userId);
-
-    // 6. Delete active stories
-    this.schema.stories = this.schema.stories.filter(s => s.userId !== userId);
-    this.schema.storyViews = this.schema.storyViews.filter(sv => sv.viewerId !== userId);
-
-    // 7. Delete saved posts
-    this.schema.savedPosts = this.schema.savedPosts.filter(sp => sp.userId !== userId);
-
-    // 8. Delete notifications
-    this.schema.notifications = this.schema.notifications.filter(n => n.senderId !== userId && n.receiverId !== userId);
-
-    // 9. Remove from conversations participants
-    this.schema.conversations.forEach(c => {
-      c.participants = c.participants.filter(pId => pId !== userId);
-    });
-    this.schema.conversations = this.schema.conversations.filter(c => c.participants.length > 0);
-
-    // 10. Splice users
-    this.schema.users.splice(userIndex, 1);
-
-    this.save();
+  async deleteUser(userId: string): Promise<boolean> {
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    if (!user) return false;
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    if (error) throw new Error(error.message);
     return true;
   }
 
-  // ==========================================================================
-  // HELPER METRICS & UTILITIES
-  // ==========================================================================
+  async getAdminStats(): Promise<AdminStats> {
+    const { count: usersCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: postsCount } = await supabase.from('posts').select('*', { count: 'exact', head: true });
+    const { count: storiesCount } = await supabase.from('stories').select('*', { count: 'exact', head: true });
+    const { count: reportsCount } = await supabase.from('reports').select('*', { count: 'exact', head: true });
+    const now = Date.now();
+    const dayAgo = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentPosts } = await supabase.from('posts').select('user_id').gte('created_at', dayAgo);
+    const { data: recentMessages } = await supabase.from('messages').select('sender_id').gte('created_at', dayAgo);
+    const activeSet = new Set<string>();
+    (recentPosts || []).forEach((p: any) => activeSet.add(p.user_id));
+    (recentMessages || []).forEach((m: any) => activeSet.add(m.sender_id));
+    const { data: admins } = await supabase.from('users').select('id').eq('role', 'admin');
+    (admins || []).forEach((a: any) => activeSet.add(a.id));
+    return {
+      usersCount: usersCount || 0,
+      postsCount: postsCount || 0,
+      storiesCount: storiesCount || 0,
+      reportsCount: reportsCount || 0,
+      activeUsers24h: Math.max(1, activeSet.size)
+    };
+  }
+
+  // =================== HELPERS ===================
 
   private extractHashtags(text: string): string[] {
     const tags: string[] = [];
@@ -1003,31 +590,175 @@ class Database {
     let match;
     while ((match = regex.exec(text)) !== null) {
       const tag = match[1].toLowerCase().trim();
-      if (tag && !tags.includes(tag)) {
-        tags.push(tag);
-      }
+      if (tag && !tags.includes(tag)) tags.push(tag);
     }
     return tags;
   }
 
-  getAdminStats(): AdminStats {
-    const now = Date.now();
-    const activeUsers24h = this.schema.users.filter(u => {
-      // Quick fallback metric for activity
-      const isCreator = this.schema.posts.some(p => p.userId === u.id && (now - new Date(p.createdAt).getTime()) < 24 * 60 * 60 * 1000);
-      const isMessenger = this.schema.messages.some(m => m.senderId === u.id && (now - new Date(m.createdAt).getTime()) < 24 * 60 * 60 * 1000);
-      return isCreator || isMessenger || u.role === 'admin';
-    }).length;
-
+  private mapUserRow(row: any): User {
     return {
-      usersCount: this.schema.users.length,
-      postsCount: this.schema.posts.length,
-      storiesCount: this.schema.stories.length,
-      reportsCount: this.schema.reports.length,
-      activeUsers24h: Math.max(1, activeUsers24h)
+      id: row.id,
+      email: row.email,
+      passwordHash: row.password_hash,
+      username: row.username,
+      name: row.name,
+      role: row.role,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapProfileRow(row: any): Profile {
+    return {
+      userId: row.user_id,
+      avatarUrl: row.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop',
+      coverUrl: row.cover_url || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop',
+      bio: row.bio || '',
+      website: row.website || '',
+      location: row.location || '',
+      isPrivate: row.is_private ?? false,
+      themePreference: row.theme_preference || 'light',
+      settings: row.settings ? JSON.stringify(row.settings) : undefined
+    };
+  }
+
+  private mapPostRow(row: any): Post {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      content: row.content || '',
+      createdAt: row.created_at,
+      likesCount: row.likes_count || 0,
+      commentsCount: row.comments_count || 0,
+      tags: row.tags || []
+    };
+  }
+
+  private mapMediaRow(row: any): Media {
+    return {
+      id: row.id,
+      postId: row.post_id,
+      storyId: row.story_id,
+      url: row.url,
+      type: row.type,
+      order: row.order || 0
+    };
+  }
+
+  private mapCommentRow(row: any): Comment {
+    return {
+      id: row.id,
+      postId: row.post_id,
+      userId: row.user_id,
+      content: row.content,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapLikeRow(row: any): Like {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      postId: row.post_id,
+      commentId: row.comment_id,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapFollowRow(row: any): Follow {
+    return {
+      id: row.id,
+      followerId: row.follower_id,
+      followingId: row.following_id,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapNotificationRow(row: any): Notification {
+    return {
+      id: row.id,
+      senderId: row.sender_id,
+      receiverId: row.receiver_id,
+      type: row.type,
+      postId: row.post_id,
+      commentId: row.comment_id,
+      messageId: row.message_id,
+      isRead: row.is_read ?? false,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapConversationRow(row: any): Conversation {
+    return {
+      id: row.id,
+      name: row.name,
+      isGroup: row.is_group ?? false,
+      participants: [],
+      lastMessageText: row.last_message_text || '',
+      lastMessageAt: row.last_message_at
+    };
+  }
+
+  private mapMessageRow(row: any): Message {
+    return {
+      id: row.id,
+      conversationId: row.conversation_id,
+      senderId: row.sender_id,
+      content: row.content || '',
+      mediaUrl: row.media_url,
+      mediaType: row.media_type,
+      isSeen: row.is_seen ?? false,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapStoryRow(row: any): Story {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      mediaUrl: row.media_url,
+      mediaType: row.media_type,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapStoryViewRow(row: any): StoryView {
+    return {
+      id: row.id,
+      storyId: row.story_id,
+      viewerId: row.viewer_id,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapSavedPostRow(row: any): SavedPost {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      postId: row.post_id,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapReportRow(row: any): Report {
+    return {
+      id: row.id,
+      reporterId: row.reporter_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      reason: row.reason,
+      status: row.status,
+      createdAt: row.created_at
+    };
+  }
+
+  private mapHashtagRow(row: any): Hashtag {
+    return {
+      id: row.id,
+      tag: row.tag,
+      postCount: row.post_count || 0
     };
   }
 }
 
 export const db = new Database();
-export { hashPassword };

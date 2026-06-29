@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, DragEvent } from 'react';
+import React, { useState, useEffect, useRef, DragEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Image, X, UploadCloud, Sparkles, Smile } from 'lucide-react';
+import { Image, X, CloudUpload as UploadCloud, Sparkles, Smile } from 'lucide-react';
 import { PostWithAuthor } from '../types.ts';
 
 interface CreatePostProps {
