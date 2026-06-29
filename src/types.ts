@@ -20,13 +20,15 @@ export interface User {
 export interface Profile {
   userId: string;
   avatarUrl: string;
-  coverUrl: string;
+  coverUrl?: string;
   bio: string;
   website: string;
   location: string;
-  isPrivate: boolean;
-  themePreference: string;
+  isPrivate?: boolean;
+  themePreference?: string;
   settings?: string;
+  name?: string;
+  username?: string;
 }
 
 export interface Media {

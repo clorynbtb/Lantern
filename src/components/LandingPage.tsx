@@ -82,9 +82,9 @@ export default function LandingPage({ onNavigateToAuth, onEnterGuestMode, addToa
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F0EB] dark:bg-[#0C0A09] text-neutral-900 dark:text-neutral-100 font-sans">
+    <div className="min-h-screen bg-background text-foreground font-sans">
       {/* Navbar */}
-      <nav className="sticky top-0 z-50 bg-[#F5F0EB]/80 dark:bg-[#0C0A09]/80 backdrop-blur-xl border-b border-neutral-200/40 dark:border-neutral-800/40">
+      <nav className="sticky top-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-border/70">
         <div className="max-w-6xl mx-auto h-16 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 p-0.5 shadow-md flex items-center justify-center">

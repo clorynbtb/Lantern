@@ -10,7 +10,7 @@ import {
   Sun, Moon, Search, X, Keyboard, LogOut, Lock, Users
 } from 'lucide-react';
 
-import { applyThemeVariables, THEMES } from './lib/themes.ts';
+import { applyThemeVariables, THEMES } from './features/shared/theme';
 import { applyAppearanceSettings } from './components/SettingsSection.tsx';
 
 import LandingPage from './components/LandingPage.tsx';
@@ -288,9 +288,9 @@ export default function App() {
   const inactiveNavClasses = 'text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800/50 hover:text-neutral-900 dark:hover:text-neutral-200';
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAF8F5] dark:bg-[#0C0A09] text-neutral-900 dark:text-neutral-100 transition-colors duration-300 font-sans">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-300 font-sans">
       {/* Top Bar */}
-      <div className="h-16 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-neutral-200 dark:border-slate-800 bg-[#FAF8F5]/90 dark:bg-[#0C0A09]/90 backdrop-blur-md sticky top-0 z-40">
+      <div className="h-16 flex-shrink-0 flex items-center justify-between px-4 sm:px-6 border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center shadow-md shadow-amber-500/10 cursor-pointer hover:scale-105 transition-transform" onClick={() => handleNavClick('feed')}>
             <svg className="h-[60%] w-[60%] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -371,7 +371,7 @@ export default function App() {
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar Navigation */}
-        <div className="w-16 sm:w-64 flex-shrink-0 flex flex-col justify-between py-6 border-r border-neutral-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+        <div className="w-16 sm:w-64 flex-shrink-0 flex flex-col justify-between py-6 border-r border-border bg-surface/70 backdrop-blur-md">
           <div className="flex flex-col gap-1 px-2">
             <button className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm font-medium cursor-pointer ${activeTab === 'feed' ? activeNavClasses : inactiveNavClasses}`} onClick={() => handleNavClick('feed')}>
               <Home className="h-5 w-5" /> <span className="hidden sm:inline">Feed</span>

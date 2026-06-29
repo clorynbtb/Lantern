@@ -26,7 +26,51 @@
   --color-theme-error: var(--theme-error);
 }
 
+@layer base {
+  :root {
+    color-scheme: light;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+  }
+
+  body {
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+}
+
 @layer utilities {
+  .bg-background {
+    background-color: var(--theme-bg);
+  }
+  .bg-surface {
+    background-color: var(--theme-surface);
+  }
+  .bg-card {
+    background-color: var(--theme-card);
+  }
+  .border-border {
+    border-color: var(--theme-border);
+  }
+  .text-foreground {
+    color: var(--theme-text);
+  }
+  .text-muted {
+    color: var(--theme-muted);
+  }
+  .bg-primary {
+    background-color: var(--theme-primary);
+  }
+  .bg-primary-hover {
+    background-color: var(--theme-primary-hover);
+  }
+  .text-primary {
+    color: var(--theme-primary);
+  }
+  .text-accent {
+    color: var(--theme-accent);
+  }
   .glass {
     background: rgba(250, 248, 245, 0.75);
     backdrop-filter: blur(16px);
@@ -39,7 +83,6 @@
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(226, 135, 67, 0.12);
   }
-  /* Warm breathing glow */
   .lantern-glow {
     box-shadow: 0 0 40px rgba(226, 135, 67, 0.15);
   }
