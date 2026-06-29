@@ -1,0 +1,6 @@
+{
+  "name": "Social Media Platform",
+  "description": "A production-quality social media platform combining the core features of Facebook with the modern, high-fidelity UI/UX of Instagram.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

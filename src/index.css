@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", Georgia, serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-lantern: #E28743;
+  --color-lantern-dark: #C16723;
+  --color-lantern-light: #FCEFE4;
+
+  --color-theme-bg: var(--theme-bg);
+  --color-theme-surface: var(--theme-surface);
+  --color-theme-card: var(--theme-card);
+  --color-theme-border: var(--theme-border);
+  --color-theme-primary: var(--theme-primary);
+  --color-theme-primary-hover: var(--theme-primary-hover);
+  --color-theme-secondary: var(--theme-secondary);
+  --color-theme-accent: var(--theme-accent);
+  --color-theme-text: var(--theme-text);
+  --color-theme-muted: var(--theme-muted);
+  --color-theme-success: var(--theme-success);
+  --color-theme-warning: var(--theme-warning);
+  --color-theme-error: var(--theme-error);
+}
+
+@layer utilities {
+  .glass {
+    background: rgba(250, 248, 245, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(226, 135, 67, 0.08);
+  }
+  .glass-dark {
+    background: rgba(12, 10, 9, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(226, 135, 67, 0.12);
+  }
+  /* Warm breathing glow */
+  .lantern-glow {
+    box-shadow: 0 0 40px rgba(226, 135, 67, 0.15);
+  }
+  .lantern-glow-lg {
+    box-shadow: 0 0 80px rgba(226, 135, 67, 0.25);
+  }
+}
