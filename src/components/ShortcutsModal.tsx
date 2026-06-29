@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { X, Keyboard, HelpCircle, CornerDownLeft } from 'lucide-react';
+import { X, Keyboard, Circle as HelpCircle, CornerDownLeft } from 'lucide-react';
 
 interface ShortcutsModalProps {
   onClose: () => void;
@@ -18,6 +18,7 @@ export default function ShortcutsModal({ onClose }: ShortcutsModalProps) {
       items: [
         { keys: ["1", "F"], desc: "Switch to Home Feed" },
         { keys: ["2", "E"], desc: "Switch to Explore" },
+        { keys: ["5", "C"], desc: "Switch to Communities" },
         { keys: ["3", "M"], desc: "Open Direct Messages" },
         { keys: ["4", "P"], desc: "Go to My Profile" },
       ]

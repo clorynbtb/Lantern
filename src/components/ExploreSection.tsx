@@ -5,23 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-  Compass,
-  Search,
-  Heart,
-  MessageCircle,
-  UserPlus,
-  Flame,
-  Sparkles,
-  Languages,
-  Check,
-  ArrowRight,
-  Grid,
-  TrendingUp,
-  Eye,
-  User as UserIcon,
-  BookOpen
-} from 'lucide-react';
+import { Compass, Search, Heart, MessageCircle, UserPlus, Flame, Sparkles, Languages, Check, ArrowRight, Grid2x2 as Grid, TrendingUp, Eye, User as UserIcon, BookOpen } from 'lucide-react';
 import { PostWithAuthor, UserSummary } from '../types.ts';
 import ZenReadingModal from './ZenReadingModal.tsx';
 
@@ -30,13 +14,17 @@ interface ExploreSectionProps {
   addToast: (type: 'success' | 'error' | 'info', text: string) => void;
   onViewProfile: (username: string) => void;
   currentUser: any;
+  isGuest?: boolean;
+  onGuestPrompt?: (action: string) => void;
 }
 
 export default function ExploreSection({
   token,
   addToast,
   onViewProfile,
-  currentUser
+  currentUser,
+  isGuest,
+  onGuestPrompt
 }: ExploreSectionProps) {
   const [trendingPosts, setTrendingPosts] = useState<PostWithAuthor[]>([]);
   const [hashtags, setHashtags] = useState<any[]>([]);
@@ -125,6 +113,7 @@ export default function ExploreSection({
   };
 
   const handleFollowUser = async (userId: string, username: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Following users'); return; }
     try {
       const response = await fetch(`/api/users/${userId}/follow`, {
         method: 'POST',

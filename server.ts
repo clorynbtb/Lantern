@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { db, hashPassword } from './server/db.js';
 import { supabase } from './server/supabase.js';
+import { seedDatabase } from './server/seeder.js';
 import type {
   User, Profile, PostWithAuthor, CommentWithAuthor, ConversationWithDetails,
   MessageWithSender, StoryWithAuthor, NotificationWithDetails, UserSummary, Notification as LanternNotification
@@ -936,6 +940,143 @@ async function startServer() {
     await supabase.from('follows').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await db.getAdminStats();
     res.json({ message: 'Sandbox database purged. Users remain.' });
+  });
+
+  // --- COMMUNITIES ENDPOINTS ---
+  app.get('/api/communities', optionalAuth, async (req: Request, res: Response) => {
+    const currentUserId = req.user?.id;
+    const { data: communities, error } = await supabase.from('communities').select('*').order('member_count', { ascending: false });
+    if (error) { res.status(500).json({ error: error.message }); return; }
+    const enriched = [];
+    for (const c of communities || []) {
+      const { data: members } = await supabase.from('community_members').select('*').eq('community_id', c.id);
+      const isMember = currentUserId ? (members || []).some((m: any) => m.user_id === currentUserId) : false;
+      const memberRole = currentUserId ? (members || []).find((m: any) => m.user_id === currentUserId)?.role || null : null;
+      const { data: rules } = await supabase.from('community_rules').select('*').eq('community_id', c.id).order('order', { ascending: true });
+      enriched.push({ ...c, isMember, memberRole, rules: rules || [] });
+    }
+    res.json({ communities: enriched });
+  });
+
+  app.get('/api/communities/:slug', optionalAuth, async (req: Request, res: Response) => {
+    const { slug } = req.params;
+    const currentUserId = req.user?.id;
+    const { data: community, error } = await supabase.from('communities').select('*').eq('slug', slug).maybeSingle();
+    if (error || !community) { res.status(404).json({ error: 'Community not found.' }); return; }
+    const { data: members } = await supabase.from('community_members').select('*, users:user_id(*)').eq('community_id', community.id);
+    const { data: rules } = await supabase.from('community_rules').select('*').eq('community_id', community.id).order('order', { ascending: true });
+    const { data: events } = await supabase.from('community_events').select('*').eq('community_id', community.id).order('event_date', { ascending: true });
+    const { data: cp } = await supabase.from('community_posts').select('post_id').eq('community_id', community.id).order('is_pinned', { ascending: false });
+    const isMember = currentUserId ? (members || []).some((m: any) => m.user_id === currentUserId) : false;
+    const memberRole = currentUserId ? (members || []).find((m: any) => m.user_id === currentUserId)?.role || null : null;
+    const communityPosts = [];
+    for (const cpItem of (cp || [])) {
+      const post = await db.getPostById(cpItem.post_id);
+      if (post) {
+        const media = await db.getPostMedia(post.id);
+        const isLiked = currentUserId ? await db.isPostLiked(currentUserId, post.id) : false;
+        const isSaved = currentUserId ? await db.isPostSaved(currentUserId, post.id) : false;
+        communityPosts.push({ ...post, author: await getUserSummary(post.userId, currentUserId), media, isLiked, isSaved });
+      }
+    }
+    const memberDetails = [];
+    for (const m of (members || []).slice(0, 10)) {
+      memberDetails.push(await getUserSummary(m.user_id, currentUserId));
+    }
+    res.json({ community: { ...community, isMember, memberRole, rules: rules || [], events: events || [], posts: communityPosts, members: memberDetails } });
+  });
+
+  app.post('/api/communities', requireAuth, async (req: Request, res: Response) => {
+    const { name, description, slug, isPrivate } = req.body;
+    const user = req.user!;
+    if (!name || !slug) { res.status(400).json({ error: 'Name and slug are required.' }); return; }
+    const { data: existing } = await supabase.from('communities').select('id').eq('slug', slug).maybeSingle();
+    if (existing) { res.status(400).json({ error: 'A community with this slug already exists.' }); return; }
+    const { data: community, error } = await supabase.from('communities').insert({
+      name, description: description || '', slug: slug.toLowerCase().trim(), is_private: isPrivate || false, created_by: user.id
+    }).select().single();
+    if (error) { res.status(500).json({ error: error.message }); return; }
+    await supabase.from('community_members').insert({ community_id: community.id, user_id: user.id, role: 'owner' });
+    await supabase.from('communities').update({ member_count: 1 }).eq('id', community.id);
+    res.status(201).json({ message: 'Community created successfully', community });
+  });
+
+  app.post('/api/communities/:slug/join', requireAuth, async (req: Request, res: Response) => {
+    const { slug } = req.params;
+    const user = req.user!;
+    const { data: community } = await supabase.from('communities').select('*').eq('slug', slug).maybeSingle();
+    if (!community) { res.status(404).json({ error: 'Community not found.' }); return; }
+    const { data: existing } = await supabase.from('community_members').select('id').eq('community_id', community.id).eq('user_id', user.id).maybeSingle();
+    if (existing) { res.status(400).json({ error: 'You are already a member of this community.' }); return; }
+    await supabase.from('community_members').insert({ community_id: community.id, user_id: user.id, role: 'member' });
+    await supabase.from('communities').update({ member_count: (community.member_count || 0) + 1 }).eq('id', community.id);
+    res.json({ message: 'Joined community successfully' });
+  });
+
+  app.post('/api/communities/:slug/leave', requireAuth, async (req: Request, res: Response) => {
+    const { slug } = req.params;
+    const user = req.user!;
+    const { data: community } = await supabase.from('communities').select('*').eq('slug', slug).maybeSingle();
+    if (!community) { res.status(404).json({ error: 'Community not found.' }); return; }
+    const { data: member } = await supabase.from('community_members').select('*').eq('community_id', community.id).eq('user_id', user.id).maybeSingle();
+    if (!member) { res.status(400).json({ error: 'You are not a member of this community.' }); return; }
+    if (member.role === 'owner') { res.status(400).json({ error: 'Community owners cannot leave. Transfer ownership first.' }); return; }
+    await supabase.from('community_members').delete().eq('id', member.id);
+    await supabase.from('communities').update({ member_count: Math.max(0, (community.member_count || 0) - 1) }).eq('id', community.id);
+    res.json({ message: 'Left community successfully' });
+  });
+
+  app.post('/api/communities/:slug/posts', requireAuth, async (req: Request, res: Response) => {
+    const { slug } = req.params;
+    const { content, mediaUrls } = req.body;
+    const user = req.user!;
+    const { data: community } = await supabase.from('communities').select('*').eq('slug', slug).maybeSingle();
+    if (!community) { res.status(404).json({ error: 'Community not found.' }); return; }
+    const { data: member } = await supabase.from('community_members').select('*').eq('community_id', community.id).eq('user_id', user.id).maybeSingle();
+    if (!member) { res.status(403).json({ error: 'You must be a member to post in this community.' }); return; }
+    const newPost = await db.createPost(user.id, content || '', mediaUrls || []);
+    await supabase.from('community_posts').insert({ community_id: community.id, post_id: newPost.id });
+    await supabase.from('communities').update({ post_count: (community.post_count || 0) + 1 }).eq('id', community.id);
+    const postWithAuthor: PostWithAuthor = {
+      ...newPost,
+      author: await getUserSummary(user.id, user.id),
+      media: await db.getPostMedia(newPost.id),
+      isLiked: false,
+      isSaved: false
+    };
+    res.status(201).json({ message: 'Post published to community', post: postWithAuthor });
+  });
+
+  app.post('/api/communities/:slug/pin/:postId', requireAuth, async (req: Request, res: Response) => {
+    const { slug, postId } = req.params;
+    const user = req.user!;
+    const { data: community } = await supabase.from('communities').select('*').eq('slug', slug).maybeSingle();
+    if (!community) { res.status(404).json({ error: 'Community not found.' }); return; }
+    const { data: member } = await supabase.from('community_members').select('*').eq('community_id', community.id).eq('user_id', user.id).maybeSingle();
+    if (!member || (member.role !== 'owner' && member.role !== 'moderator')) { res.status(403).json({ error: 'Only owners and moderators can pin posts.' }); return; }
+    const { data: cp } = await supabase.from('community_posts').select('*').eq('community_id', community.id).eq('post_id', postId).maybeSingle();
+    if (!cp) { res.status(404).json({ error: 'Post not found in this community.' }); return; }
+    const newPinned = !cp.is_pinned;
+    await supabase.from('community_posts').update({ is_pinned: newPinned, pinned_at: newPinned ? new Date().toISOString() : null }).eq('id', cp.id);
+    res.json({ message: newPinned ? 'Post pinned' : 'Post unpinned' });
+  });
+
+  // --- SEED ENDPOINT ---
+  app.post('/api/admin/dev/seed', requireAuth, async (req: Request, res: Response) => {
+    const user = req.user!;
+    if (user.role !== 'admin') {
+      res.status(403).json({ error: 'Only administrators can seed the database.' });
+      return;
+    }
+    const { count } = req.body;
+    const target = count || 150;
+    try {
+      const stats = await seedDatabase(target);
+      res.json({ message: `Database seeded successfully with ${stats.users} users`, stats });
+    } catch (err: any) {
+      console.error('[Seed] Error:', err);
+      res.status(500).json({ error: err.message || 'Seed failed' });
+    }
   });
 
   // ==========================================================================

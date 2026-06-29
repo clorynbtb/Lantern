@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, MessageCircle, Bookmark, Send, MoreHorizontal, Image, Plus, Trash2, ShieldAlert, BookOpen } from 'lucide-react';
+import { Heart, MessageCircle, Bookmark, Send, MoveHorizontal as MoreHorizontal, Image, Plus, Trash2, ShieldAlert, BookOpen } from 'lucide-react';
 import { PostWithAuthor, CommentWithAuthor, UserSummary } from '../types.ts';
 import CreatePost from './CreatePost.tsx';
 import StoriesModal from './StoriesModal.tsx';
@@ -17,9 +17,11 @@ interface FeedSectionProps {
   addToast: (type: 'success' | 'error' | 'info', text: string) => void;
   onViewProfile: (username: string) => void;
   isAdmin: boolean;
+  isGuest?: boolean;
+  onGuestPrompt?: (action: string) => void;
 }
 
-export default function FeedSection({ token, currentUser, addToast, onViewProfile, isAdmin }: FeedSectionProps) {
+export default function FeedSection({ token, currentUser, addToast, onViewProfile, isAdmin, isGuest, onGuestPrompt }: FeedSectionProps) {
   const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [suggestions, setSuggestions] = useState<UserSummary[]>([]);
   const [groupedStories, setGroupedStories] = useState<any[]>([]);
@@ -119,6 +121,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Creating posts'); return; }
     if (!newPostContent.trim() && !newPostMedia.trim()) return;
 
     setIsCreatingPost(true);
@@ -150,6 +153,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleToggleLike = async (postId: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Liking posts'); return; }
     // Store original state for potential rollback
     const originalPosts = [...posts];
     let nextLiked = false;
@@ -199,6 +203,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleToggleSave = async (postId: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Saving bookmarks'); return; }
     // Store original state for potential rollback
     const originalPosts = [...posts];
     let nextSaved = false;
@@ -249,6 +254,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleFollowUser = async (userId: string, username: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Following users'); return; }
     try {
       const response = await fetch(`/api/users/${userId}/follow`, {
         method: 'POST',
@@ -265,6 +271,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleAddComment = async (postId: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Commenting'); return; }
     const text = activeComments[postId];
     if (!text || !text.trim()) return;
 
@@ -318,6 +325,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleDeletePost = async (postId: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Deleting posts'); return; }
     if (!window.confirm('Are you absolutely sure you want to remove this post?')) return;
 
     try {
@@ -335,6 +343,7 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
   };
 
   const handleReportPost = async (postId: string) => {
+    if (isGuest && onGuestPrompt) { onGuestPrompt('Reporting content'); return; }
     const reason = window.prompt('Please enter a short reason for reporting this content:');
     if (!reason || !reason.trim()) return;
 
@@ -369,12 +378,13 @@ export default function FeedSection({ token, currentUser, addToast, onViewProfil
         
         {/* Stories Horizontal Tray */}
         <div className="p-4 rounded-2xl bg-theme-card border border-theme-border shadow-sm flex items-center gap-4 overflow-x-auto select-none" id="stories-tray">
-          <div 
+          <div
             onClick={() => {
+              if (isGuest && onGuestPrompt) { onGuestPrompt('Creating stories'); return; }
               setActiveStoryGroup(null);
               setIsStoriesModalOpen(true);
             }}
-            className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0" 
+            className="flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0"
             id="create-story-bubble"
           >
             <div className="h-14 w-14 rounded-full border border-theme-border flex items-center justify-center relative bg-theme-secondary/20 hover:border-theme-primary transition-colors">

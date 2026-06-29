@@ -19,7 +19,8 @@ import {
   Wrench,
   ToggleLeft,
   ToggleRight,
-  Code
+  Code,
+  Globe
 } from 'lucide-react';
 
 interface DeveloperDiagnosticsProps {
@@ -182,6 +183,31 @@ export default function DeveloperDiagnostics({
     }
   };
 
+  const handleSeedWorld = async () => {
+    const start = performance.now();
+    addToast('info', 'Seeding the living world... This may take a minute.');
+    try {
+      const res = await fetch('/api/admin/dev/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ count: 150 }),
+      });
+      const data = await res.json();
+      const duration = Math.floor(performance.now() - start);
+      triggerLogEvent('POST', '/api/admin/dev/seed', res.status, duration);
+
+      if (res.ok) {
+        addToast('success', `Living world seeded! ${data.stats.users} users, ${data.stats.posts} posts, ${data.stats.communities} communities.`);
+        window.dispatchEvent(new CustomEvent('sandbox_data_refreshed'));
+        if (onRefreshData) onRefreshData();
+      } else {
+        addToast('error', data.error || 'Failed to seed world');
+      }
+    } catch (e) {
+      addToast('error', 'Network failure during world seeding');
+    }
+  };
+
   const handlePurgeDatabase = async () => {
     if (!window.confirm('WARNING: This will wipe all user-created sandbox posts, comments, likes, and stories! Proceed?')) return;
     
@@ -336,6 +362,17 @@ export default function DeveloperDiagnostics({
                       <div>
                         <p className="font-bold text-white text-[10px]">Gen Story</p>
                         <p className="text-[9px] text-neutral-500 mt-0.5 truncate">Dynamic story card</p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleSeedWorld}
+                      className="p-3 bg-neutral-900 hover:bg-neutral-800 border border-amber-500/30 rounded-xl text-left hover:text-white transition-colors cursor-pointer flex flex-col justify-between h-20"
+                    >
+                      <Globe className="h-4.5 w-4.5 text-amber-500" />
+                      <div>
+                        <p className="font-bold text-white text-[10px]">Seed World</p>
+                        <p className="text-[9px] text-neutral-500 mt-0.5 truncate">150 users, posts, communities</p>
                       </div>
                     </button>
 
