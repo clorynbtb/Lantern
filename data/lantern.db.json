@@ -1,0 +1,527 @@
+{
+  "users": [
+    {
+      "id": "u_admin",
+      "email": "admin@lantern.com",
+      "passwordHash": "8a13c995a69eceb52d2160da0d1da86b2197233de3a67779c4f1dc4e117e2a79",
+      "username": "lantern",
+      "name": "Lantern Staff",
+      "role": "admin",
+      "createdAt": "2026-05-30T03:40:19.823Z"
+    },
+    {
+      "id": "u_sophia",
+      "email": "sophia@example.com",
+      "passwordHash": "8a13c995a69eceb52d2160da0d1da86b2197233de3a67779c4f1dc4e117e2a79",
+      "username": "sophia.sterling",
+      "name": "Sophia Sterling",
+      "role": "user",
+      "createdAt": "2026-05-30T03:40:19.823Z"
+    },
+    {
+      "id": "u_marcus",
+      "email": "marcus@example.com",
+      "passwordHash": "8a13c995a69eceb52d2160da0d1da86b2197233de3a67779c4f1dc4e117e2a79",
+      "username": "marcus.designs",
+      "name": "Marcus Chen",
+      "role": "user",
+      "createdAt": "2026-05-30T03:40:19.823Z"
+    },
+    {
+      "id": "u_elena",
+      "email": "elena@example.com",
+      "passwordHash": "8a13c995a69eceb52d2160da0d1da86b2197233de3a67779c4f1dc4e117e2a79",
+      "username": "elena.wanderlust",
+      "name": "Elena Rostova",
+      "role": "user",
+      "createdAt": "2026-05-30T03:40:19.823Z"
+    },
+    {
+      "id": "u_liam",
+      "email": "liam@example.com",
+      "passwordHash": "8a13c995a69eceb52d2160da0d1da86b2197233de3a67779c4f1dc4e117e2a79",
+      "username": "liam.creates",
+      "name": "Liam Sterling",
+      "role": "user",
+      "createdAt": "2026-05-30T03:40:19.823Z"
+    }
+  ],
+  "profiles": [
+    {
+      "userId": "u_admin",
+      "avatarUrl": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=200&h=200&fit=crop",
+      "coverUrl": "https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&h=400&fit=crop",
+      "bio": "Official Lantern community manager and platform updates channel. Welcome to our secure, modern space. #LanternSocial",
+      "website": "lantern.com",
+      "location": "San Francisco, CA",
+      "isPrivate": false,
+      "themePreference": "light"
+    },
+    {
+      "userId": "u_sophia",
+      "avatarUrl": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
+      "coverUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=400&fit=crop",
+      "bio": "Portrait Photographer & Product Designer. Capturing geometry in raw emotions. ✨ Let's collaborate!",
+      "website": "sophiasterling.studio",
+      "location": "New York, NY",
+      "isPrivate": false,
+      "themePreference": "light"
+    },
+    {
+      "userId": "u_marcus",
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
+      "coverUrl": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&h=400&fit=crop",
+      "bio": "Minimalist Architect & UI/UX Director. Designing objects that stand the test of physical and digital time. #minimalism #design",
+      "website": "chen-minimalist.io",
+      "location": "Tokyo, JP",
+      "isPrivate": false,
+      "themePreference": "dark"
+    },
+    {
+      "userId": "u_elena",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop",
+      "coverUrl": "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1200&h=400&fit=crop",
+      "bio": "Explorer of remote corners. Documenting cultures, mountains, and culinary wonders. 🧭 Always on the move.",
+      "website": "elena-travels.com",
+      "location": "Rome, IT",
+      "isPrivate": false,
+      "themePreference": "light"
+    },
+    {
+      "userId": "u_liam",
+      "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
+      "coverUrl": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=400&fit=crop",
+      "bio": "Visual Creator, Film director and Indie developer. Building immersive interactive layouts.",
+      "website": "liamcreates.co",
+      "location": "London, UK",
+      "isPrivate": false,
+      "themePreference": "light"
+    }
+  ],
+  "posts": [
+    {
+      "id": "p_1",
+      "userId": "u_sophia",
+      "content": "Golden Hour in New York. There is a specific angle where the city looks entirely painted in warm gold and glowing copper. Shot on 35mm. #goldenhour #photography #nyc",
+      "createdAt": "2026-06-26T03:40:19.824Z",
+      "likesCount": 3,
+      "commentsCount": 2,
+      "tags": [
+        "goldenhour",
+        "photography",
+        "nyc"
+      ]
+    },
+    {
+      "id": "p_2",
+      "userId": "u_marcus",
+      "content": "Completed the pavilion design project for the Tokyo Arch Expo. Stretched canvas interfaces met structural cedar wood beams. #minimalism #architecture #tokyo",
+      "createdAt": "2026-06-27T03:40:19.824Z",
+      "likesCount": 2,
+      "commentsCount": 1,
+      "tags": [
+        "minimalism",
+        "architecture",
+        "tokyo"
+      ]
+    },
+    {
+      "id": "p_3",
+      "userId": "u_elena",
+      "content": "Waking up to the mist rolling over the Italian Dolomites. No signal, no noise, just the sound of mountain air. 🏔️🇮🇹 #dolomites #travel #mountains",
+      "createdAt": "2026-06-28T03:40:19.824Z",
+      "likesCount": 4,
+      "commentsCount": 2,
+      "tags": [
+        "dolomites",
+        "travel",
+        "mountains"
+      ]
+    }
+  ],
+  "media": [
+    {
+      "id": "m_p1_1",
+      "url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&fit=crop",
+      "type": "image",
+      "order": 0,
+      "postId": "p_1"
+    },
+    {
+      "id": "m_p2_1",
+      "url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&fit=crop",
+      "type": "image",
+      "order": 0,
+      "postId": "p_2"
+    },
+    {
+      "id": "m_p2_2",
+      "url": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&fit=crop",
+      "type": "image",
+      "order": 1,
+      "postId": "p_2"
+    },
+    {
+      "id": "m_p3_1",
+      "url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&fit=crop",
+      "type": "image",
+      "order": 0,
+      "postId": "p_3"
+    }
+  ],
+  "comments": [
+    {
+      "id": "c_1",
+      "postId": "p_1",
+      "userId": "u_marcus",
+      "content": "These colors are incredible Sophia. 35mm dynamic range hits different!",
+      "createdAt": "2026-06-26T08:28:19.824Z"
+    },
+    {
+      "id": "c_2",
+      "postId": "p_1",
+      "userId": "u_elena",
+      "content": "Makes me want to visit NY next month. Perfect timing!",
+      "createdAt": "2026-06-26T15:40:19.824Z"
+    },
+    {
+      "id": "c_3",
+      "postId": "p_2",
+      "userId": "u_sophia",
+      "content": "The wood textures are beautiful. Minimalist perfection.",
+      "createdAt": "2026-06-27T08:28:19.824Z"
+    },
+    {
+      "id": "c_4",
+      "postId": "p_3",
+      "userId": "u_liam",
+      "content": "Absolutely breathtaking Elena! Take me next time.",
+      "createdAt": "2026-06-28T06:04:19.824Z"
+    },
+    {
+      "id": "c_5",
+      "postId": "p_3",
+      "userId": "u_sophia",
+      "content": "That mist frame is perfect.",
+      "createdAt": "2026-06-28T15:40:19.824Z"
+    }
+  ],
+  "likes": [
+    {
+      "id": "l_1",
+      "userId": "u_marcus",
+      "postId": "p_1",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_2",
+      "userId": "u_elena",
+      "postId": "p_1",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_3",
+      "userId": "u_liam",
+      "postId": "p_1",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_4",
+      "userId": "u_sophia",
+      "postId": "p_2",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_5",
+      "userId": "u_liam",
+      "postId": "p_2",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_6",
+      "userId": "u_sophia",
+      "postId": "p_3",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_7",
+      "userId": "u_marcus",
+      "postId": "p_3",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_8",
+      "userId": "u_liam",
+      "postId": "p_3",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "l_9",
+      "userId": "u_admin",
+      "postId": "p_3",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    }
+  ],
+  "follows": [
+    {
+      "id": "f_0",
+      "followerId": "u_sophia",
+      "followingId": "u_marcus",
+      "createdAt": "2026-06-09T03:40:19.823Z"
+    },
+    {
+      "id": "f_1",
+      "followerId": "u_sophia",
+      "followingId": "u_elena",
+      "createdAt": "2026-06-09T03:40:19.823Z"
+    },
+    {
+      "id": "f_2",
+      "followerId": "u_sophia",
+      "followingId": "u_admin",
+      "createdAt": "2026-06-09T03:40:19.823Z"
+    },
+    {
+      "id": "f_3",
+      "followerId": "u_marcus",
+      "followingId": "u_sophia",
+      "createdAt": "2026-06-09T03:40:19.823Z"
+    },
+    {
+      "id": "f_4",
+      "followerId": "u_marcus",
+      "followingId": "u_admin",
+      "createdAt": "2026-06-09T03:40:19.823Z"
+    },
+    {
+      "id": "f_5",
+      "followerId": "u_elena",
+      "followingId": "u_sophia",
+      "createdAt": "2026-06-09T03:40:19.824Z"
+    },
+    {
+      "id": "f_6",
+      "followerId": "u_elena",
+      "followingId": "u_marcus",
+      "createdAt": "2026-06-09T03:40:19.824Z"
+    },
+    {
+      "id": "f_7",
+      "followerId": "u_liam",
+      "followingId": "u_sophia",
+      "createdAt": "2026-06-09T03:40:19.824Z"
+    },
+    {
+      "id": "f_8",
+      "followerId": "u_liam",
+      "followingId": "u_marcus",
+      "createdAt": "2026-06-09T03:40:19.824Z"
+    },
+    {
+      "id": "f_9",
+      "followerId": "u_liam",
+      "followingId": "u_elena",
+      "createdAt": "2026-06-09T03:40:19.824Z"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "nt_1",
+      "senderId": "u_marcus",
+      "receiverId": "u_sophia",
+      "type": "like",
+      "postId": "p_1",
+      "isRead": false,
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "nt_2",
+      "senderId": "u_marcus",
+      "receiverId": "u_sophia",
+      "type": "comment",
+      "postId": "p_1",
+      "commentId": "c_1",
+      "isRead": false,
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    }
+  ],
+  "conversations": [
+    {
+      "id": "conv_1",
+      "isGroup": false,
+      "participants": [
+        "u_sophia",
+        "u_marcus"
+      ],
+      "lastMessageText": "The project details look great. Talk tomorrow!",
+      "lastMessageAt": "2026-06-29T02:40:19.824Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_1",
+      "conversationId": "conv_1",
+      "senderId": "u_sophia",
+      "content": "Hey Marcus, did you see the design specs I uploaded?",
+      "isSeen": true,
+      "createdAt": "2026-06-29T01:40:19.824Z"
+    },
+    {
+      "id": "msg_2",
+      "conversationId": "conv_1",
+      "senderId": "u_marcus",
+      "content": "Yes, just reviewed them. Love the spatial layout.",
+      "isSeen": true,
+      "createdAt": "2026-06-29T02:10:19.824Z"
+    },
+    {
+      "id": "msg_3",
+      "conversationId": "conv_1",
+      "senderId": "u_sophia",
+      "content": "The project details look great. Talk tomorrow!",
+      "isSeen": false,
+      "createdAt": "2026-06-29T02:40:19.824Z"
+    }
+  ],
+  "stories": [
+    {
+      "id": "st_1",
+      "userId": "u_sophia",
+      "mediaUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&h=1000&fit=crop",
+      "mediaType": "image",
+      "expiresAt": "2026-06-29T21:40:19.824Z",
+      "createdAt": "2026-06-28T21:40:19.824Z"
+    },
+    {
+      "id": "st_2",
+      "userId": "u_marcus",
+      "mediaUrl": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&h=1000&fit=crop",
+      "mediaType": "image",
+      "expiresAt": "2026-06-29T23:40:19.824Z",
+      "createdAt": "2026-06-28T23:40:19.824Z"
+    }
+  ],
+  "storyViews": [
+    {
+      "id": "stv_1",
+      "storyId": "st_1",
+      "viewerId": "u_marcus",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "stv_2",
+      "storyId": "st_1",
+      "viewerId": "u_elena",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    }
+  ],
+  "savedPosts": [
+    {
+      "id": "sp_1",
+      "userId": "u_sophia",
+      "postId": "p_2",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    },
+    {
+      "id": "sp_2",
+      "userId": "u_marcus",
+      "postId": "p_3",
+      "createdAt": "2026-06-29T03:40:19.824Z"
+    }
+  ],
+  "reports": [],
+  "hashtags": [
+    {
+      "id": "h_1",
+      "tag": "photography",
+      "postCount": 1
+    },
+    {
+      "id": "h_2",
+      "tag": "nyc",
+      "postCount": 1
+    },
+    {
+      "id": "h_3",
+      "tag": "minimalism",
+      "postCount": 1
+    },
+    {
+      "id": "h_4",
+      "tag": "architecture",
+      "postCount": 1
+    },
+    {
+      "id": "h_5",
+      "tag": "tokyo",
+      "postCount": 1
+    },
+    {
+      "id": "h_6",
+      "tag": "dolomites",
+      "postCount": 1
+    },
+    {
+      "id": "h_7",
+      "tag": "travel",
+      "postCount": 1
+    },
+    {
+      "id": "h_8",
+      "tag": "mountains",
+      "postCount": 1
+    },
+    {
+      "id": "h_9",
+      "tag": "goldenhour",
+      "postCount": 1
+    }
+  ],
+  "postHashtags": [
+    {
+      "id": "ph_1",
+      "postId": "p_1",
+      "hashtagId": "h_9"
+    },
+    {
+      "id": "ph_2",
+      "postId": "p_1",
+      "hashtagId": "h_1"
+    },
+    {
+      "id": "ph_3",
+      "postId": "p_1",
+      "hashtagId": "h_2"
+    },
+    {
+      "id": "ph_4",
+      "postId": "p_2",
+      "hashtagId": "h_3"
+    },
+    {
+      "id": "ph_5",
+      "postId": "p_2",
+      "hashtagId": "h_4"
+    },
+    {
+      "id": "ph_6",
+      "postId": "p_2",
+      "hashtagId": "h_5"
+    },
+    {
+      "id": "ph_7",
+      "postId": "p_3",
+      "hashtagId": "h_6"
+    },
+    {
+      "id": "ph_8",
+      "postId": "p_3",
+      "hashtagId": "h_7"
+    },
+    {
+      "id": "ph_9",
+      "postId": "p_3",
+      "hashtagId": "h_8"
+    }
+  ]
+}
